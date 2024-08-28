@@ -1,0 +1,18 @@
+--- webserver.conf	2015-12-07 18:11:57.000000000 +0000
++++ webserver.conf.new	2024-03-06 16:07:10.029237000 +0000
+@@ -3,4 +3,13 @@ webserver: {
+     client-auth = want
+     ssl-host = 0.0.0.0
+     ssl-port = 8140
+-}
+\ No newline at end of file
++    ssl-protocols = TLSv1.2
++    cipher-suites = [TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++                    TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++                    TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++                    TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++                    TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
++                    TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
++                    TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,
++                    TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256]
++}

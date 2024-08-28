@@ -1,0 +1,11 @@
+--- ../../../../../LITP/puppetserver/puppetserver_1.1.3_nexus/puppetserver-1.1.3/ext/redhat/init	2015-12-07 18:12:00.000000000 +0000
++++ ../../target/puppetserver-1.1.3/ext/redhat/init	2019-10-24 12:44:48.056504951 +0100
+@@ -37,7 +37,7 @@ JARFILE="puppet-server-release.jar"
+ JAVA_ARGS="${JAVA_ARGS} -cp '${INSTALL_DIR}/${JARFILE}' clojure.main -m puppetlabs.trapperkeeper.main --config ${CONFIG} -b '${BOOTSTRAP_CONFIG}'"
+ EXTRA_ARGS="--chuid $USER --background --make-pidfile"
+ lockfile=/var/lock/subsys/$prog
+-EXEC="$JAVA_BIN -XX:OnOutOfMemoryError=\"kill -9 %p\" -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/$prog -Djava.security.egd=/dev/urandom $JAVA_ARGS"
++EXEC="$JAVA_BIN -XX:OnOutOfMemoryError=\"kill -9 %p\" -Djava.security.egd=/dev/urandom $JAVA_ARGS"
+ PIDFILE="/var/run/$prog/$prog"
+ START_TIMEOUT=${START_TIMEOUT:-120}
+ 

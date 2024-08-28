@@ -1,0 +1,32 @@
+--- EXTRlitppuppetserver_orig/Builder/target/puppetserver-1.1.3/ext/config/logback.xml	2015-12-07 18:11:57.000000000 +0000
++++ EXTRlitppuppetserver_new/Builder/target/puppetserver-1.1.3/ext/config/logback.xml	2019-05-16 10:42:39.945896424 +0100
+@@ -5,21 +5,18 @@
+         </encoder>
+     </appender>
+ 
+-    <appender name="F1" class="ch.qos.logback.core.FileAppender">
+-        <!-- TODO: this path should not be hard-coded -->
+-        <file>/var/log/puppetserver/puppetserver.log</file>
+-        <append>true</append>
+-        <encoder>
+-            <pattern>%d %-5p [%c{2}] %m%n</pattern>
+-        </encoder>
++    <appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
++       <syslogHost>localhost</syslogHost>
++       <facility>USER</facility>
++       <suffixPattern>%-5p [puppet-server] %m%n</suffixPattern>
++       <stackTracePattern>%-5p [puppet-server] %m%n</stackTracePattern>
+     </appender>
+ 
+     <logger name="org.eclipse.jetty" level="INFO"/>
+ 
+     <root level="info">
+-        <!--<appender-ref ref="STDOUT"/>-->
+-        <!-- ${logappender} logs to console when running the foreground command -->
+         <appender-ref ref="${logappender}"/>
+-        <appender-ref ref="F1"/>
++        <appender-ref ref="SYSLOG"/>
+     </root>
+ </configuration>
++
+

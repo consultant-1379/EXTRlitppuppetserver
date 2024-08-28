@@ -1,0 +1,14 @@
+--- puppetserver.service.orig	2020-04-07 16:15:38.634995998 +0100
++++ puppetserver.service	2020-04-07 16:24:13.690637765 +0100
+@@ -12,10 +12,8 @@ TimeoutStopSec=60
+ PermissionsStartOnly=true
+ ExecStartPre=/usr/bin/install --group=puppet --owner=puppet -d /var/run/puppet
+ 
+-ExecStart=/usr/bin/java $JAVA_ARGS \
++ExecStart=/usr/java/default/bin/java $JAVA_ARGS \
+           '-XX:OnOutOfMemoryError=kill -9 %%p' \
+-          -XX:+HeapDumpOnOutOfMemoryError \
+-          -XX:HeapDumpPath=/var/log/puppetserver \
+           -Djava.security.egd=/dev/urandom \
+           -cp "${INSTALL_DIR}/puppet-server-release.jar" clojure.main \
+           -m puppetlabs.trapperkeeper.main \

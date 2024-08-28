@@ -1,0 +1,45 @@
+--- puppetserver.conf.orig	2015-12-07 18:11:57.000000000 +0000
++++ puppetserver.conf.new	2024-03-07 09:30:31.610082000 +0000
+@@ -1,3 +1,5 @@
++# This file is under LITP control. Any changes will be overwritten.
++
+ # configuration for the JRuby interpreters
+ jruby-puppet: {
+     # This setting determines where JRuby will look for gems.  It is also
+@@ -11,19 +13,23 @@ jruby-puppet: {
+     master-var-dir: /var/lib/puppet
+ 
+     # (optional) maximum number of JRuby instances to allow
+-    #max-active-instances: 1
++    max-active-instances: 4
+ }
+ 
+ # settings related to HTTP client requests made by Puppet Server
+ http-client: {
+     # A list of acceptable protocols for making HTTP requests
+-    #ssl-protocols: [TLSv1, TLSv1.1, TLSv1.2]
++    ssl-protocols: [TLSv1.2]
+ 
+     # A list of acceptable cipher suites for making HTTP requests
+-    #cipher-suites: [TLS_RSA_WITH_AES_256_CBC_SHA256,
+-    #                TLS_RSA_WITH_AES_256_CBC_SHA,
+-    #                TLS_RSA_WITH_AES_128_CBC_SHA256,
+-    #                TLS_RSA_WITH_AES_128_CBC_SHA]
++    cipher-suites: [TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++                    TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++                    TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++                    TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++                    TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
++                    TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
++                    TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,
++                    TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256]
+ }
+ 
+ # settings related to profiling the puppet Ruby code
+@@ -34,5 +40,5 @@ profiler: {
+ 
+ # Settings related to the puppet-admin HTTP API
+ puppet-admin: {
+-    client-whitelist: []
++    client-whitelist: [{hostname}]
+ }

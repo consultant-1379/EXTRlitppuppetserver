@@ -1,0 +1,60 @@
+--- ./Builder/src/puppetserver-1.1.3/install.sh.orig	2020-05-05 11:36:03.228096971 +0100
++++ ./Builder/src/puppetserver-1.1.3/install.sh	2020-05-05 11:38:29.092241351 +0100
+@@ -12,6 +12,7 @@ prefix=${prefix:=/usr}
+ initdir=${initdir:=/etc/init.d}
+ unitdir=${unitdir:=/usr/lib/systemd/system}
+ datadir=${datadir:=${prefix}/share}
++rsyslogdir=${rsyslogdir:=/etc/rsyslog.d}
+ real_name=${real_name:=puppetserver}
+ projdatadir=${projdatadir:=${datadir}/${real_name}}
+ confdir=${confdir:=/etc}
+@@ -19,6 +20,8 @@ projconfdir=${projconfdir:=${confdir}/${
+ rundir=${rundir:=/var/run}
+ bindir=${bindir:=/usr/bin}
+ localstatedir=${localstatedir:=/var}
++manifestsdir=${manifestsdir:=/opt/ericsson/nms/litp/etc/puppet/modules/puppetserver/manifests}
++templatesdir=${templatesdir:=/opt/ericsson/nms/litp/etc/puppet/modules/puppetserver/templates}
+ 
+ ##################
+ # EZBake Vars    #
+@@ -117,6 +120,7 @@ function task_install {
+     install -m 0644 ext/config/conf.d/webserver.conf "${DESTDIR}${projconfdir}/conf.d/webserver.conf"
+     install -d -m 0755 "${DESTDIR}${projdatadir}/scripts"
+     install -m 0755 install.sh "${DESTDIR}${projdatadir}/scripts"
++    install -m 0755 ext/puppetserver_monitor.sh "${DESTDIR}${projdatadir}/scripts"
+     install -d -m 0755 "${DESTDIR}${projdatadir}/cli"
+     install -d -m 0755 "${DESTDIR}${projdatadir}/cli/apps"
+     install -d -m 0755 "${DESTDIR}${bindir}"
+@@ -127,6 +131,14 @@ function task_install {
+     install -m 0755 ext/cli/ruby "${DESTDIR}${projdatadir}/cli/apps/ruby"
+     install -d -m 0755 "${DESTDIR}${rundir}"
+     install -d -m 700 "${DESTDIR}${localstatedir}/log/puppetserver"
++    install -d -m 755 "${DESTDIR}${rsyslogdir}"
++    install -m 755 ext/resources/rsyslog.d/0_a_litp_udp_514_receiver.conf "${DESTDIR}${rsyslogdir}/0_a_litp_udp_514_receiver.conf"
++    install -d -m 0755 "${DESTDIR}${manifestsdir}"
++    install -m 0755 ext/puppet/manifests/server_conf.pp "${DESTDIR}${manifestsdir}/server_conf.pp"
++    install -d -m 0755 "${DESTDIR}${templatesdir}"
++    install -m 0755 ext/puppet/templates/puppetserver.conf.erb "${DESTDIR}${templatesdir}/puppetserver.conf.erb"
++    install -m 0755 ext/puppet/templates/sysconfig_puppetserver.erb "${DESTDIR}${templatesdir}/sysconfig_puppetserver.erb"
++
+ }
+ 
+ function task_install_redhat {
+@@ -154,6 +166,7 @@ function task_sysv_init_redhat {
+     task defaults
+     install -d -m 0755 "${DESTDIR}${initdir}"
+     install -m 0755 ext/redhat/init "${DESTDIR}${initdir}/puppetserver"
++    install -m 0755 ext/redhat/puppetserver_monitor_init "${DESTDIR}${initdir}/puppetserver_monitor"
+ }
+ 
+ # Install the sysv and defaults configuration for SuSE.
+@@ -167,7 +180,8 @@ function task_sysv_init_suse {
+ function task_systemd_redhat {
+     task defaults
+     install -d -m 0755 "${DESTDIR}${unitdir}"
+-    install -m 0755 ext/redhat/puppetserver.service "${DESTDIR}${unitdir}/puppetserver.service"
++    install -m 0644 ext/redhat/puppetserver.service "${DESTDIR}${unitdir}/puppetserver.service"
++    install -m 0644 ext/redhat/puppetserver_monitor.service "${DESTDIR}${unitdir}/puppetserver_monitor.service"
+ }
+ 
+ # Install the sysv and defaults configuration for Debian.

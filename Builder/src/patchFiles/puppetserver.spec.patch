@@ -1,0 +1,283 @@
+--- puppetserver.spec.orig	2024-03-05 16:31:30.129698000 +0000
++++ puppetserver.spec	2024-03-05 16:31:47.396610000 +0000
+@@ -1,8 +1,13 @@
++%define debug_package %{nil}
++
+ %global realname puppetserver
+ %global realversion 1.1.3
+-%global rpmversion 1.1.3
++%global rpmversion  <rpm.version>
++%global packager <ericsson.rstate>
++%global monitor %{realname}_monitor
+
+ %global open_jdk          java-1.7.0-openjdk
++%global oracle_jre        EXTRserverjre_CXP9035480
+ 
+ %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
+ %global rubylibdir        %(ruby -rrbconfig -e "puts Config::CONFIG['vendorlibdir']")
+@@ -21,18 +26,21 @@
+ %global  _realsysconfdir /etc
+ %global  _rundir         /var/run
+ 
++%global manifestsdir /opt/ericsson/nms/litp/etc/puppet/modules/puppetserver/manifests
++%global templatesdir /opt/ericsson/nms/litp/etc/puppet/modules/puppetserver/templates
++ 
+ %define __jar_repack     0
+ 
+-Name:             puppetserver
+-Version:          1.1.3
+-Release:          1%{?dist}
++Name:             EXTRlitppuppetserver_CXP9037406
++Version:          %{rpmversion}
++Release:          1
+ BuildRoot:        %{_tmppath}/%{realname}-%{version}-%{release}-root-%(%{__id_u} -n)
+-
++Packager:         %{packager}
+ Summary:          Puppet Labs - puppetserver
+ License:          ASL 2.0
+ 
+ URL:              http://puppetlabs.com
+-Source0:          %{name}-%{realversion}.tar.gz
++Source0:          %{realname}-%{realversion}.tar.gz
+ 
+ Group:            System Environment/Daemons
+ BuildArch:        noarch
+@@ -50,7 +58,6 @@ BuildRequires:    systemd
+ Requires:         chkconfig
+ %endif
+ 
+-Requires:         %{open_jdk}
+ # net-tools is required for netstat usage in service unit file
+ # See: https://tickets.puppetlabs.com/browse/SERVER-338
+ Requires:         net-tools
+@@ -59,14 +66,20 @@ Requires:         puppet >= 3.7.3
+ 
+ Requires:         puppet < 4.0.0
+ 
+-Requires:         java-1.7.0-openjdk
++Requires:         EXTRserverjre_CXP9035480
++
++Requires:         bc
++
++Provides:        %{realname} = %{realversion}
++
++Obsoletes:       EXTRlitppuppetserver_CXP9030764
+ 
+ 
+ %description
+-Puppet Server (puppetserver 1.1.3,trapperkeeper-webserver-jetty9 1.3.1)
++Puppet Server (puppetserver 1.1.3,trapperkeeper-webserver-jetty9 1.3.1) repacked by Ericsson from Puppetlabs source code
+ 
+ %prep
+-%setup -q -n %{name}-%{realversion}
++%setup -q -n %{realname}-%{realversion}
+ 
+ %build
+ 
+@@ -74,11 +87,11 @@ Puppet Server (puppetserver 1.1.3,trappe
+ 
+ rm -rf $RPM_BUILD_ROOT
+ 
+-env EZ_VERBOSE=1 DESTDIR=%{buildroot} prefix=%{_prefix} confdir=%{_sysconfdir} bindir=%{_bindir} rundir=%{_rundir}/puppetserver localstatedir=%{_localstatedir} rubylibdir=%{rubylibdir} bash install.sh install_redhat
++env EZ_VERBOSE=1 DESTDIR=%{buildroot} prefix=%{_prefix} confdir=%{_sysconfdir} bindir=%{_bindir} rundir=%{_rundir}/%{realname} localstatedir=%{_localstatedir} rubylibdir=%{rubylibdir} bash install.sh install_redhat
+ %if %{_with_systemd}
+-env EZ_VERBOSE=1 DESTDIR=%{buildroot} prefix=%{_prefix} confdir=%{_sysconfdir} bindir=%{_bindir} rundir=%{_rundir}/puppetserver defaultsdir=%{_sysconfdir}/sysconfig unitdir=%{_unitdir} bash install.sh systemd_redhat
++env EZ_VERBOSE=1 DESTDIR=%{buildroot} prefix=%{_prefix} confdir=%{_sysconfdir} bindir=%{_bindir} rundir=%{_rundir}/%{realname} defaultsdir=%{_sysconfdir}/sysconfig unitdir=%{_unitdir} bash install.sh systemd_redhat
+ %else
+-env EZ_VERBOSE=1 DESTDIR=%{buildroot} prefix=%{_prefix} confdir=%{_sysconfdir} bindir=%{_bindir} rundir=%{_rundir}/puppetserver defaultsdir=%{_sysconfdir}/sysconfig initdir=%{_initrddir} bash install.sh sysv_init_redhat
++env EZ_VERBOSE=1 DESTDIR=%{buildroot} prefix=%{_prefix} confdir=%{_sysconfdir} bindir=%{_bindir} rundir=%{_rundir}/%{realname} defaultsdir=%{_sysconfdir}/sysconfig initdir=%{_initrddir} bash install.sh sysv_init_redhat
+ %endif
+
+ %if 0%{?fedora} >= 16 || 0%{?rhel} >= 7 || 0%{?sles_version} >= 12
+@@ -101,27 +114,107 @@ getent group puppet > /dev/null || \
+ # Add puppet user
+ getent passwd puppet > /dev/null || \
+   useradd -r -g puppet -d %{_datadir}/%{realname} -s /sbin/nologin \
+-     -c "puppetserver daemon"  puppet || :
++     -c "%{realname} daemon"  puppet || :
+ install --group=puppet --owner=puppet -d /var/lib/puppet/jruby-gems
+ mkdir -p /etc/puppet/manifests
+
+ %post
++hostname=$(hostname)
++hostname=${hostname,,}
++FILE1="/etc/sysconfig/puppetserver"
++FILE2="/etc/puppetserver/conf.d/puppetserver.conf"
++FILE3="/opt/ericsson/nms/litp/etc/puppet/modules/puppetserver/templates/puppetserver.conf.erb"
++is_virtual="0"
++target_physical_heap_mem="25"
++target_virtual_heap_mem="4"
++target_instances="4"
++PREAMBLE1='JAVA_ARGS='
++PREAMBLE2='max-active-instances:'
++
++function set_min_heap {
++  target_heap_mem=$1
++  current_min_mem=$2
++
++  if [ ! -z "${current_min_mem}" ] && [ "${current_min_mem}" -lt "${target_heap_mem}" ]
++  then
++    /bin/sed -i -e "s/^\(${PREAMBLE1}\"-Xms\)${current_min_mem}\(g \+.*\)$/\1${target_heap_mem}\2/" "${FILE1}"
++  fi
++}
++
++function set_max_heap {
++   target_heap_mem=$1
++   current_max_mem=$2
++
++   if [ ! -z "${current_max_mem}" ] && [ "${current_max_mem}" -lt "${target_heap_mem}" ]
++   then
++      /bin/sed -i -e "s/^\(${PREAMBLE1}\"-Xms[0-9]\+g \+-Xmx\)${current_max_mem}\(g.*\)$/\1${target_heap_mem}\2/" "${FILE1}"
++   fi
++}
++
++if [ -f "${FILE1}" ] && [ -f "${FILE2}" ] && [ -f "${FILE3}" ]
++then
++    provider=$(/usr/sbin/dmidecode -s system-manufacturer | /bin/awk '{print tolower($0)}' | /bin/awk '{$1=$1};1')
++    case "${provider}" in
++      *vmware*) ;&
++      *virtualbox*) ;&
++      *kvm*) ;&
++      *'red hat'*) ;&
++      *qemu*)
++        is_virtual="1"
++        ;;
++    esac
++    current_min_mem=$(/bin/egrep "^${PREAMBLE1}" "${FILE1}" 2> /dev/null | /bin/sed -e "s/^${PREAMBLE1}\"-Xms\([0-9]\+\)g.*$/\1/")
++    current_max_mem=$(/bin/egrep "^${PREAMBLE1}" "${FILE1}" 2> /dev/null | /bin/sed -e "s/^${PREAMBLE1}\"-Xms${current_min_mem}g \+-Xmx\([0-9]\+\)g.*$/\1/")
++    current_instances=$(/bin/egrep "^ *${PREAMBLE2} " "${FILE2}" 2> /dev/null | /bin/awk -F':' '{print $2}' | /bin/awk '{$1=$1};1')
++    if [ "${is_virtual}" == "0" ]
++    then
++        set_min_heap "${target_physical_heap_mem}" "${current_min_mem}"
++        set_max_heap "${target_physical_heap_mem}" "${current_max_mem}"
++
++        for conf_file in "${FILE2}" "${FILE3}";
++        do
++            if [ ! -z "${current_instances}" ] && [ "${current_instances}" -lt "${target_instances}" ]
++            then
++                /bin/sed -i -e "s/^\( *${PREAMBLE2} \+\)[0-9]\+.*$/\1${target_instances}/" "${conf_file}"
++            fi
++        done
++    else
++      total_virtual_mem=$(facter -p | grep -w memorysize | awk '{print $3}')
++
++      if [ "$(echo "${total_virtual_mem}  > ${target_virtual_heap_mem}" | bc -l)" == 1 ]
++      then
++        set_min_heap "${target_virtual_heap_mem}" "${current_min_mem}"
++        set_max_heap "${target_virtual_heap_mem}" "${current_max_mem}"
++      fi
++    fi
++fi
++lowercase_hostname=$(echo $hostname | tr '[:upper:]' '[:lower:]')
++sed -i -e "s/{hostname}/$lowercase_hostname/g" "${FILE2}"
++
+ %if %{_with_systemd}
++# Enable the systemd units if this is an install or upgrade
++systemctl enable %{realname}.service
++systemctl enable %{monitor}.service
+ # Reload the systemd units if this is an upgrade
+ if [ "$1" = "2" ]; then
+     systemctl daemon-reload >/dev/null 2>&1 || :
+-    systemctl try-restart %{name}.service
++    systemctl restart %{realname}.service >/dev/null 2>&1
++    systemctl restart %{monitor}.service >/dev/null 2>&1
+ fi
+-%systemd_post puppetserver.service
+ %else
++service rsyslog restart || :
+ # If this is an install (as opposed to an upgrade)...
+ if [ "$1" = "1" ]; then
+-    # Register the puppetserver service
+-    /sbin/chkconfig --add %{name}
++    # Register the services
++    /sbin/chkconfig --add %{realname}
++    /sbin/chkconfig --add %{monitor}
+ # If this is an upgrade, restart if we are already running
+ elif [ "$1" = "2" ]; then
+-    if /sbin/service %{name} status > /dev/null 2>&1; then
+-        /sbin/service %{name} restart || :
++    if /sbin/service %{realname} status > /dev/null 2>&1; then
++        /sbin/service %{realname} restart || :
++    fi
++    if /sbin/service %{monitor} status > /dev/null 2>&1; then
++        /sbin/service %{monitor} restart || :
+     fi
+ fi
+ %endif
+@@ -129,49 +222,55 @@ fi
+
+ %preun
+ %if %{_with_systemd}
+-%systemd_preun puppetserver.service
++%systemd_preun %{realname}.service
++%systemd_preun %{monitor}.service
+ %else
+ # If this is an uninstall (as opposed to an upgrade) then
+-#  we want to shut down and disable the service.
++#  we want to shut down and disable the services.
+ if [ "$1" = "0" ] ; then
+-    /sbin/service %{name} stop >/dev/null 2>&1
+-    /sbin/chkconfig --del %{name}
++    /sbin/service %{realname} stop >/dev/null 2>&1
++    /sbin/service %{monitor} stop >/dev/null 2>&1
++    /sbin/chkconfig --del %{realname}
++    /sbin/chkconfig --del %{monitor}
+ fi
+ %endif
+ 
+ %postun
+ %if %{_with_systemd}
+-%systemd_postun_with_restart puppetserver.service
++%systemd_postun_with_restart %{realname}.service
++%systemd_postun_with_restart %{monitor}.service
+ %else
+ # Remove the rundir if this is an uninstall (as opposed to an upgrade)...
+ if [ "$1" = "0" ]; then
+-    rm -rf %{_rundir}/%{name} || :
++    rm -rf %{_rundir}/%{realname} || :
+ fi
+ 
+-# Only restart it if it is running
++# Only restart services if they are running
+ if [ "$1" = "1" ] ; then
+-    /sbin/service %{name} condrestart >/dev/null 2>&1
++    /sbin/service %{realname} condrestart >/dev/null 2>&1
++    /sbin/service %{monitor} condrestart >/dev/null 2>&1
+ fi
+ %endif
+ 
+ %files
+-%defattr(-, root, root)
+-%dir %attr(0700, puppet, puppet) %{_localstatedir}/log/%{name}
++%defattr(-, root, root, 0755)
++%dir %attr(0700, puppet, puppet) %{_localstatedir}/log/%{realname}
+ %{_datadir}/%{realname}
+ %if %{_with_systemd}
+-%{_unitdir}/%{name}.service
++%{_unitdir}/%{realname}.service
++%{_unitdir}/%{monitor}.service
+ %else
+-%{_initrddir}/%{name}
++%{_initrddir}/%{realname}
++%{_initrddir}/%{monitor}
+ %endif
+-%config(noreplace) %{_sysconfdir}/%{name}
+-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+-%config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
+-%{_bindir}/puppetserver
+-%ghost %attr(0755, root, root) %{_rundir}/%{name}
+-
+ 
++%{manifestsdir}
++%{templatesdir} 
+ 
++%{_sysconfdir}/%{realname}
++%{_sysconfdir}/sysconfig/%{realname}
++%{_sysconfdir}/logrotate.d/%{realname}
++%{_sysconfdir}/rsyslog.d/
++%{_bindir}/%{realname}
++%ghost %attr(0755, root, root) %{_rundir}/%{realname}
+ 
+-%changelog
+-* Mon Dec 07 2015 Puppet Labs Release <info@puppetlabs.com> -  1.1.3-1
+-- Build for 1.1.3
